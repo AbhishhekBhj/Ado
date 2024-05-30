@@ -1,0 +1,6 @@
+@Webapiwithado_HostAddress = http://localhost:5282
+
+GET {{Webapiwithado_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
