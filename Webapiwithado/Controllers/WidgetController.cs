@@ -47,5 +47,27 @@ namespace Webapiwithado.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
             }
         }
+
+
+
+        [HttpDelete]
+        [Route("DeleteWidget/{widgetId}")]
+
+        public async Task<IActionResult> DeleteWidgetAsync([FromRoute] int widgetId)
+        {
+            try
+            {
+                await _widgetDataAccess.DeleteWidgetAsync(widgetId);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+
+
     }
+
 }

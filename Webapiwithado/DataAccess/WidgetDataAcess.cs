@@ -164,6 +164,67 @@ namespace Webapiwithado.DataAccess
                 throw; // Re-throw the exception to propagate it upwards
             }
         }
+        public async Task<ResponseModel> DeleteWidgetAsync(int id)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    using (SqlCommand sqlCommand = new SqlCommand("deletewidgetobject", connection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+
+                        sqlCommand.Parameters.AddWithValue("@widgetid", id);
+
+                        int rowsAffected = await sqlCommand.ExecuteNonQueryAsync();
+
+                        if (rowsAffected > 0)
+                        {
+                            ResponseModel responseModel = new ResponseModel
+                            {
+                                Message = "Success",
+                                Status = 200,
+                                Data = JsonConvert.SerializeObject(id)
+                            };
+                            return responseModel;
+                        }
+                        else
+                        {
+                            ResponseModel responseModel = new ResponseModel
+                            {
+                                Message = "Failed",
+                                Status = 500,
+                                Data = JsonConvert.SerializeObject("Failed to delete widget")
+                            };
+                            return responseModel;   
+                        }
+
+                    }
+            }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred while deleting widget: {ex.Message}");
+                ResponseModel responseModel = new ResponseModel
+                {
+                    Message = "Failed",
+                    Status = 500,
+                    Data = JsonConvert.SerializeObject(ex.Message)
+
+                };
+                throw;
+            }
+        }
+
+
+
 
     }
+
+
+
+
+
 }
