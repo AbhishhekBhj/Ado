@@ -20,7 +20,167 @@ namespace Webapiwithado.DataAccess
             _createJWT = createJWT;
         }
 
+        public async Task<ResponseModel> CheckandVerifyOTPAsync(OtpVerfifyModel otpVerifyModel)
+        {
+            if (otpVerifyModel == null)
+            {
+                return new ResponseModel
+                {
+                    Message = "Invalid request data",
+                    Status = 400,
+                    Data = null
+                };
+            }
 
+            try
+            {
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using (SqlCommand sqlCommand = new SqlCommand("verifyotp", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        sqlCommand.Parameters.AddWithValue("@email", otpVerifyModel.Email);  // Corrected parameter name
+
+                        using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            if (await sqlDataReader.ReadAsync())
+                            {
+                                string otp = sqlDataReader.GetString(sqlDataReader.GetOrdinal("otp"));
+
+                                if (otp == otpVerifyModel.Otp)
+
+                                {
+                                    sqlDataReader.Close();
+                                    using (SqlCommand sqlCommands = new SqlCommand("verifyuser", sqlConnection))
+                                    {
+                                        sqlCommands.CommandType = CommandType.StoredProcedure;
+                                        sqlCommands.Parameters.AddWithValue("@email", otpVerifyModel.Email);  // Ensure the parameter name matches the stored procedure
+
+                                        int rowsAffected = await sqlCommands.ExecuteNonQueryAsync();
+
+                                        if (rowsAffected > 0)
+                                        {
+                                            return new ResponseModel
+                                            {
+                                                Message = "Success",
+                                                Status = 200,
+                                                Data = null
+                                            };
+                                        }
+                                        else
+                                        {
+                                            return new ResponseModel
+                                            {
+                                                Message = "Failed to update user verification status",
+                                                Status = 500,
+                                                Data = null
+                                            };
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    return new ResponseModel
+                                    {
+                                        Message = "Invalid OTP",
+                                        Status = 401,
+                                        Data = null
+                                    };
+                                }
+                            }
+                            else
+                            {
+                                return new ResponseModel
+                                {
+                                    Message = "User not found",
+                                    Status = 404,
+                                    Data = null
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+                Console.WriteLine(sqlEx.Message);
+
+                return new ResponseModel
+                {
+                    Message = "Database error occurred",
+                    Status = 500,
+                    Data = null
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+
+                return new ResponseModel
+                {
+                    Message = "An error occurred",
+                    Status = 500,
+                    Data = null
+                };
+            }
+        }
+
+
+
+
+
+        public async Task<ResponseModel> SetOtpInUserTableAsync(int otp , string email)
+        {
+            try
+            {
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using (SqlCommand sqlCommand = new SqlCommand("setotpfrommail", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+
+                        sqlCommand.Parameters.AddWithValue("@otp", otp);
+                        sqlCommand.Parameters.AddWithValue("@email", email);
+
+                        int rowsAffected = await sqlCommand.ExecuteNonQueryAsync();
+
+                        if (rowsAffected > 0)
+                        {
+                            return new ResponseModel
+                            {
+                                Message = "Success",
+                                Status = 200,
+                                Data = null
+                            };
+                        }
+                        else
+                        {
+                            return new ResponseModel
+                            {
+                                Message = "Failed",
+                                Status = 500,
+                                Data = null
+                            };
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                ResponseModel responseModel = new ResponseModel
+                {
+                    Message = "Failed",
+                    Status = 500,
+                    Data = JsonConvert.SerializeObject(ex.Message)
+                };
+                return responseModel;
+            }
+        }   
 
         public async Task<ResponseModel> CreateNewUser(User user)
         {
@@ -110,7 +270,10 @@ namespace Webapiwithado.DataAccess
                                         UserId = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("userid")),
                                         UserName = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("username")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("UserName")),
                                         Email = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("email")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("Email")),
-                                        Photo = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("photo")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("Photo"))
+                                        Photo = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("photo")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("Photo")),
+                                           IsVerified = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("isverified")),
+                                           SignedInWithGoogle = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("signedinwithgoogle")),
+                                    
                                     };
 
                                     
@@ -378,6 +541,8 @@ namespace Webapiwithado.DataAccess
             }
         }
 
+
+      
         private bool VerifyPassword(string enteredPassword, string storedPasswordHash)
         {
             // Implement the hashing comparison as described in the earlier example

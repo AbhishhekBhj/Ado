@@ -12,6 +12,15 @@
 
         public string? Photo { get; set; }
 
+        public int IsVerified { get; set; }
+
+        public int Otp { get; set; }
+
+        public int SignedInWithGoogle { get; set; }
+
 
     }
+
+
+
 }

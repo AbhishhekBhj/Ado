@@ -3,30 +3,13 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Webapiwithado.DataAccess;
 using Webapiwithado.ExternalFunctions;
+using Webapiwithado.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 
-//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-
-
-
-
-//    .AddJwtBearer(options =>
-//    {
-//        options.TokenValidationParameters = new TokenValidationParameters
-//        {
-//            ValidateIssuer = true,
-//            ValidateAudience = true,
-//            ValidateLifetime = true,
-//            ValidateIssuerSigningKey = true,
-//            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-//            ValidAudience = builder.Configuration["Jwt:Audience"],
-//            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
-
-//        };
-//    });
+builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 builder.Services.AddAuthentication(x =>
 {
@@ -69,6 +52,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 

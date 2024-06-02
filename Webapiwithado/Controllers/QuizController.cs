@@ -27,6 +27,7 @@ namespace Webapiwithado.Controllers
             try
             {
                 ResponseModel responseModel = await _quizDataAccess.GetAllQuizAsync();
+                Console.WriteLine(responseModel.Data.Count.ToString());
                 return Ok(responseModel);
             }
             catch (Exception ex)
@@ -35,21 +36,98 @@ namespace Webapiwithado.Controllers
             }
         }
 
-        //[HttpGet]
-        //[Route("GetQuizById/{quizId}")]
+        [HttpGet]
+        [Route("GetUserScoreForParticularQuiz/{userId}/{quizId}")]
+        [Authorize]
 
-        //public async Task<IActionResult> GetQuizByIdAsync([FromRoute] int quizId)
-        //{
-        //    try
-        //    {
-        //        ResponseModel responseModel = await _quizDataAccess.GetQuizContent(quizId);
-        //        return Ok(responseModel);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-        //    }
-        //}
+        public async Task<IActionResult> GetUserScoreForParticularQuizAsync([FromRoute] int userId, [FromRoute] int quizId)
+        {
+            try
+            {
+                ResponseModel responseModel = await _quizDataAccess.GetUserQuizScoreForAParticularQuiz(userId, quizId);
+                return Ok(responseModel);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+
+        [HttpGet]
+        [Route("GetUserBest3Quizes/{userId}")]
+        [Authorize]
+
+        public async Task<IActionResult> GetUserBest3QuizesAsync([FromRoute] int userId)
+        {
+            try
+            {
+                ResponseModel responseModel = await _quizDataAccess.GetUserTop3BestQuizAsync(userId);
+                return Ok(responseModel);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+        [HttpGet]
+        [Route("GetUserWorst3Quizes/{userId}")]
+        [Authorize]
+
+        public async Task<IActionResult> GetUserWorst3QuizesAsync([FromRoute] int userId)
+        {
+            try
+            {
+                ResponseModel responseModel = await _quizDataAccess.GetUserTop3WorstQuizAsync(userId);
+                return Ok(responseModel);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+
+        [HttpGet]
+        [Route("GetQuizObjectByID/{quizId}")]
+        [Authorize]
+        
+
+        public async Task<IActionResult> GetQuizObjectByIDAsync([FromRoute] int quizId)
+        {
+            try
+            {
+                ResponseModel responseModel = await _quizDataAccess.GetQuizObjectByIDAsync(quizId);
+                return Ok(responseModel);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+        [HttpPost]
+        [Route("SubmitQuizScore")]
+        [Authorize]
+
+        public async Task<IActionResult> SubmitQuizScoreAsync([FromBody] SubmitQuizScore submitQuizScore)
+        {
+            try
+            {
+                ResponseModel responseModel = await _quizDataAccess.PostQuizScoreAsync(submitQuizScore);
+                return Ok(responseModel);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+
+        
+
+        
 
 
 

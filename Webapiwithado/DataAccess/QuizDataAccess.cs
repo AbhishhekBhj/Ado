@@ -3,6 +3,7 @@ using System.Data.SqlClient;
 using Webapiwithado.Models;
 using Newtonsoft.Json;
 using Webapiwithado.DTOs;
+using System.Data;
 
 
 namespace Webapiwithado.DataAccess
@@ -19,141 +20,270 @@ namespace Webapiwithado.DataAccess
         }
 
 
-        //public async Task<ResponseModel> GetQuizContent(int quizId)
-        //{
+        public async Task<ResponseModel> GetUserQuizScoreForAParticularQuiz(int userid, int quizid)
+        {
+            try
+            {
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
 
-        //    String quizTitle = "";
-        //    String quizDescription = "";
-        //    DateTime quizDate = DateTime.Now;
-        //    List<String> questions = new List<string>();
-        //    List<String> options = new List<string>();
-        //    String correctAnswer = "";
-        //    int questionId = 0;
-        //    String questionText;
-        //    List<int> optionIds = new List<int>();
+                    using (SqlCommand sqlCommand = new SqlCommand("getuserscoreforparticularquiz", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        sqlCommand.Parameters.AddWithValue("@userid", userid);
+                        sqlCommand.Parameters.AddWithValue("@quizid", quizid);
 
-
-        //    try
-        //    {
-        //        using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
-        //        {
-        //            await sqlConnection.OpenAsync();
-
-        //            using (SqlCommand sqlCommand = new SqlCommand("getquizobjectbyid", sqlConnection))
-        //            {
-        //                sqlCommand.CommandType = System.Data.CommandType.StoredProcedure;
-        //                sqlCommand.Parameters.AddWithValue("@quizid", quizId);
-
-        //                using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
-        //                {
-        //                    if (sqlDataReader.HasRows)
-
-
-        //                    {
-
-        //                        QuizDTO quizDTO = new QuizDTO();
-        //                        OptionDTO optionDTO = new OptionDTO();
-        //                        QuestionDTO questionDTO = new QuestionDTO();
-        //                        Quiz quiz = new Quiz();
-
-        //                        while (await sqlDataReader.ReadAsync())
-        //                        {
-        //                            for (int i = 0; i < sqlDataReader.FieldCount; i++)
-        //                            {
-        //                                quizId = Convert.ToInt32(sqlDataReader["quizid"]);
-        //                                quizTitle = sqlDataReader["title"].ToString();
-        //                                quizDescription = sqlDataReader["description"].ToString();
-        //                                quizDate = Convert.ToDateTime(sqlDataReader["createdat"]);
-
-        //                                questionId = Convert.ToInt32(sqlDataReader["questionid"]);
-        //                                questionText= sqlDataReader["questiontext"].ToString();
-        //                                if(questions.Contains(questionText) == false)
-        //                                {
-        //                                    questions.Add(questionText);
-        //                                }
-        //                                optionIds.Add(Convert.ToInt32(sqlDataReader["optionid"]));
-
-        //                                options.Add(sqlDataReader["optiontext"].ToString());
-
-        //                                if (sqlDataReader["iscorrect"].ToString() == "1")
-        //                                {
-        //                                    correctAnswer = sqlDataReader["optiontext"].ToString();
-        //                                }
-        //                                else
-        //                                {
-        //                                    correctAnswer = "No correct answer found";
-        //                                }
-
-        //                                OptionDTO option = new OptionDTO
-        //                                {
-        //                               OptionID=     optionDTO = Convert.ToInt32(sqlDataReader["optionid"]);
-        //                                optionDTO.OptionText = sqlDataReader["optiontext"].ToString();
-        //                                optionDTO.IsCorrect = Convert.ToBoolean(sqlDataReader["iscorrect"]);
-        //                            };
-
-        //                                questionDTO.QuestionID = Convert.ToInt32(sqlDataReader["questionid"]);
-        //                                questionDTO.QuestionText = sqlDataReader["questiontext"].ToString();
-        //                                questionDTO.Answers.Add(optionDTO);
-
-        //                                quizDTO.QuizID = Convert.ToInt32(sqlDataReader["quizid"]);
-        //                                quizDTO.QuizTitle = sqlDataReader["title"].ToString();
-        //                                quizDTO.QuizDescription = sqlDataReader["description"].ToString();
-        //                                quizDTO.Questions.Add(questionDTO);
-                                        
-                                        
-                                        
-
-                                       
-
-                                       
-        //                            }
+                        using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            if (sqlDataReader.HasRows)
+                            {
+                                await sqlDataReader.ReadAsync(); // Move to the first record
+                                var userQuizScore = new UserQuizScore
+                                {
+                                    Username = sqlDataReader["username"].ToString() ?? "",
+                                    Title = sqlDataReader["title"].ToString() ?? "",
+                                    Score = Convert.ToInt32(sqlDataReader["score"]),
+                                    TimeStamp = Convert.ToDateTime(sqlDataReader["TakenAt"])
                                     
-        //                            Console.WriteLine("Quiz object: " + JsonConvert.SerializeObject(quiz));
-                                   
-        //                        }
-        //                        return new ResponseModel
-        //                        {
-        //                            Data = quizDTO,
-        //                            Message = "Success",
-        //                            Status = 200
-        //                        };
+                                };
+
+                                return new ResponseModel
+                                {
+                                    Data = userQuizScore,
+                                    Message = "Success",
+                                    Status = 200
+                                };
+                            }
+                            else
+                            {
+                                return new ResponseModel
+                                {
+                                    Message = "No score found for the given user and quiz",
+                                    Status = 404,
+                                    Data = null
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log exception (ex.Message)
+                return new ResponseModel
+                {
+                    Message = "An error occurred",
+                    Status = 500,
+                    Data = ex.Message
+                };
+            }
+        }
 
 
 
-        //                    }
 
-        //                    else
-        //                    {
-        //                        return new ResponseModel
-        //                        {
-        //                            Message = "Failed",
-        //                            Status = 500,
-        //                            Data = "No quiz found with the given ID"
-        //                        };
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    catch (SqlException sqlExc)
-        //    {
-        //        return new ResponseModel
-        //        {
-        //            Message = "Failed",
-        //            Status = 500,
-        //            Data = sqlExc.Message
-        //        };
-        //    }
-        //    catch (System.Exception ex)
-        //    {
-        //        return new ResponseModel
-        //        {
-        //            Message = "Failed",
-        //            Status = 500,
-        //            Data = "An error occurred while fetching quiz content: " + ex.Message
-        //        };
-        //    }
-        //}
+        public async Task<ResponseModel> GetUserTop3WorstQuizAsync(int userid)
+        {
+            try
+            {
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using (SqlCommand sqlCommand = new SqlCommand("getusers3worstquiz", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        sqlCommand.Parameters.AddWithValue("@userid", userid);
+
+                        using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            if (sqlDataReader.HasRows)
+                            {
+                                List<UserQuizScore> userQuizScores = new List<UserQuizScore>();
+                                while (await sqlDataReader.ReadAsync())
+                                {
+                                    userQuizScores.Add(
+                                                                               new UserQuizScore
+                                                                               {
+                                                                                   Username = sqlDataReader["username"].ToString() ?? "",
+                                                                                   Title = sqlDataReader["title"].ToString() ?? "",
+                                                                                   Score = Convert.ToInt32(sqlDataReader["score"]),
+                                                                                   TimeStamp = Convert.ToDateTime(sqlDataReader["takenat"])
+                                                                               }
+                                                                                                                      );
+                                }
+                                return new ResponseModel
+                                {
+                                    Data = userQuizScores,
+                                    Message = "Success",
+                                    Status = 200
+                                };
+                            }
+                            else
+                            {
+                                return new ResponseModel
+                                {
+                                    Message = "No quiz found for the given user",
+                                    Status = 404,
+                                    Data = null
+                                };
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            catch (Exception ex)
+            {
+                return new ResponseModel
+                {
+                    Message = "An error occurred",
+                    Status = 500,
+                    Data = ex.Message
+                };
+            }
+        }
+
+
+
+        public async Task<ResponseModel> GetUserTop3BestQuizAsync(int userid)
+        {
+            try
+            {
+                using(SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using (SqlCommand sqlCommand = new SqlCommand("getuserstop3bestquiz", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        sqlCommand.Parameters.AddWithValue("@userid", userid);
+
+                        using(SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            if(sqlDataReader.HasRows)
+                            {
+                                List<UserQuizScore> userQuizScores = new List<UserQuizScore>();
+                                while(await sqlDataReader.ReadAsync())
+                                {
+                                    userQuizScores.Add(
+                                                                               new UserQuizScore
+                                                                               {
+                                            Username = sqlDataReader["username"].ToString() ?? "",
+                                            Title = sqlDataReader["title"].ToString() ?? "",
+                                            Score = Convert.ToInt32(sqlDataReader["score"]),
+                                            TimeStamp = Convert.ToDateTime(sqlDataReader["takenat"])
+                                        }
+                                                                                                                      );
+                                }
+                                return new ResponseModel
+                                {
+                                    Data = userQuizScores,
+                                    Message = "Success",
+                                    Status = 200
+                                };
+                            }
+                            else
+                            {
+                                return new ResponseModel
+                                {
+                                    Message = "No quiz found for the given user",
+                                    Status = 404,
+                                    Data = null
+                                };
+                            }
+                        }
+                    }   
+                }
+            
+            }
+
+            catch (Exception ex)
+            {
+                return new ResponseModel
+                {
+                    Message = "An error occurred",
+                    Status = 500,
+                    Data = ex.Message
+                };
+            }
+        }
+
+        public async Task<ResponseModel> GetQuizObjectByIDAsync(int quizid)
+        {
+            QuizDTO quizDTO = new QuizDTO();
+            List<QuestionDTO> questionDTOs = new List<QuestionDTO>();
+            Dictionary<int, QuestionDTO> questionMap = new Dictionary<int, QuestionDTO>();
+
+            try
+            {
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using (SqlCommand sqlCommand = new SqlCommand("getquizobjectbyid", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        sqlCommand.Parameters.AddWithValue("@quizid", quizid);
+
+                        using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            while (await sqlDataReader.ReadAsync())
+                            {
+                                if (quizDTO.QuizID == 0)
+                                {
+                                    quizDTO.QuizID = Convert.ToInt32(sqlDataReader["quizid"]);
+                                    quizDTO.QuizTitle = sqlDataReader["title"].ToString();
+                                    quizDTO.QuizDescription = sqlDataReader["description"].ToString();
+                                }
+
+                                int questionID = Convert.ToInt32(sqlDataReader["questionid"]);
+                                if (!questionMap.ContainsKey(questionID))
+                                {
+                                    var questionDTO = new QuestionDTO
+                                    {
+                                        QuestionID = questionID,
+                                        QuestionText = sqlDataReader["questiontext"].ToString(),
+                                        QuestionType = sqlDataReader["QuestionType"].ToString(),
+                                        Options = new List<OptionDTO>()
+                                    };
+                                    questionMap[questionID] = questionDTO;
+                                    questionDTOs.Add(questionDTO);
+                                }
+
+                                var optionDTO = new OptionDTO
+                                {
+                                    OptionID = Convert.ToInt32(sqlDataReader["optionid"]),
+                                    OptionText = sqlDataReader["optiontext"].ToString(),
+                                    IsCorrect = Convert.ToInt32(sqlDataReader["iscorrect"]) == 1
+                                };
+                                questionMap[questionID].Options.Add(optionDTO);
+                            }
+                        }
+                    }
+                }
+
+                quizDTO.Questions = questionDTOs;
+
+                return new ResponseModel
+                {
+                    Message = "Success",
+                    Status = 200,
+                    Data = quizDTO
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseModel
+                {
+                    Message = "An error occurred",
+                    Status = 500,
+                    Data = ex.Message
+                };
+            }
+        }
 
 
         public async Task<ResponseModel> GetAllQuizAsync()
@@ -221,6 +351,91 @@ namespace Webapiwithado.DataAccess
             }
                     
                 }
+
+
+
+        public async Task<ResponseModel> PostQuizScoreAsync(SubmitQuizScore submitQuizScore)
+        {
+            try
+            {
+
+                using(SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using(SqlCommand sqlCommand = new SqlCommand("submituserquiz", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        sqlCommand.Parameters.AddWithValue("@userid", submitQuizScore.UserID);
+                        sqlCommand.Parameters.AddWithValue("@quizid", submitQuizScore.QuizID);
+                        sqlCommand.Parameters.AddWithValue("@score", submitQuizScore.Score);
+
+                        int rowsAffected = await sqlCommand.ExecuteNonQueryAsync();
+
+                        if(rowsAffected > 0)
+                        {
+                            return new ResponseModel
+                            {
+                                Message = "Success",
+                                Status = 200,
+                                Data = null
+                            };
+                        }
+                        else
+                        {
+                            return new ResponseModel
+                            {
+                                Message = "Failed",
+                                Status = 500,
+                                Data = null
+                            };
+                        }
+                    }
+                }
+
+            }
+
+            catch (Exception ex)
+            {
+                return new ResponseModel
+                {
+                    Message = "An error occurred",
+                    Status = 500,
+                    Data = ex.Message
+                };
+            }
+
+
+
+
+
+
+        }
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             }
         }
     
