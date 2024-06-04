@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="wwwroot\Upload\**" />
+    <Content Remove="wwwroot\Upload\**" />
+    <EmbeddedResource Remove="wwwroot\Upload\**" />
+    <None Remove="wwwroot\Upload\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Models\FileUploadAPI.cs" />
   </ItemGroup>
 

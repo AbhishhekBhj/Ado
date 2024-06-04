@@ -5,6 +5,7 @@ using Webapiwithado.Models;
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using Webapiwithado.ExternalFunctions;
+using Webapiwithado.Controllers;
 namespace Webapiwithado.DataAccess
 
     
@@ -13,11 +14,15 @@ namespace Webapiwithado.DataAccess
     {
         private readonly string _connectionString;
         private readonly CreateJWT _createJWT;
+       
+        private readonly MailDataAccess mailDataAccess;
 
-        public UserDataAccess(IConfiguration configuration, CreateJWT createJWT)
+        public UserDataAccess(IConfiguration configuration, CreateJWT createJWT, MailDataAccess mailDataAccess)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
             _createJWT = createJWT;
+          
+            this.mailDataAccess = mailDataAccess;
         }
 
         public async Task<ResponseModel> CheckandVerifyOTPAsync(OtpVerfifyModel otpVerifyModel)
@@ -131,7 +136,7 @@ namespace Webapiwithado.DataAccess
 
 
 
-        public async Task<ResponseModel> SetOtpInUserTableAsync(int otp , string email)
+        public async Task<bool> SetOtpInUserTableAsync(int otp , string email)
         {
             try
             {
@@ -150,21 +155,11 @@ namespace Webapiwithado.DataAccess
 
                         if (rowsAffected > 0)
                         {
-                            return new ResponseModel
-                            {
-                                Message = "Success",
-                                Status = 200,
-                                Data = null
-                            };
+                            return true;
                         }
                         else
                         {
-                            return new ResponseModel
-                            {
-                                Message = "Failed",
-                                Status = 500,
-                                Data = null
-                            };
+                            return false;
                         }
                     }
                 }
@@ -172,18 +167,17 @@ namespace Webapiwithado.DataAccess
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                ResponseModel responseModel = new ResponseModel
-                {
-                    Message = "Failed",
-                    Status = 500,
-                    Data = JsonConvert.SerializeObject(ex.Message)
-                };
-                return responseModel;
+               
+                return false;
             }
         }   
 
-        public async Task<ResponseModel> CreateNewUser(User user)
+        public async Task<ResponseModel> CreateNewUser(UserRegisterModel user)
         {
+            User user2 = new User();
+
+            Random random = new Random();
+            int otp = random.Next(100000, 999999);
             
             try
             {
@@ -202,16 +196,39 @@ namespace Webapiwithado.DataAccess
 
                         sqlCommand.Parameters.AddWithValue("@password", hashedPassword);
                         sqlCommand.Parameters.AddWithValue("@email", user.Email);
-                        sqlCommand.Parameters.AddWithValue("@photo", user.Photo);
+
+
+
+
+
 
                         int rowsAffected = await sqlCommand.ExecuteNonQueryAsync();
                         if(rowsAffected > 0)
                         {
+
+                            bool emailSent = await mailDataAccess.SendOtpEmailAsync(user.Email, otp);
+                            if (emailSent)
+                            {
+                                bool otpSet = await SetOtpInUserTableAsync(otp, user.Email);
+                                if (otpSet)
+                                {
+                                    user2 = await GetUserDataByUsernameAsync(user.UserName);
+                                }
+                            }
+
+
+                            
+
+                            
+
+
+
+                            
                             return new ResponseModel
                             {
                                 Message = "Success",
                                 Status = 200,
-                                Data = null
+                                Data = user2
                             };
                         }
                         else
@@ -276,15 +293,22 @@ namespace Webapiwithado.DataAccess
                                     
                                     };
 
-                                    
-                                    
-                                    var token = _createJWT.CreateJWTToken(userLogin);  // Generate JWT token
+                                    var tokens = _createJWT.CreateJWTToken(userLogin);
+
+                                    if (tokens != null)
+                                    {
+                                        string accessToken = tokens["accessToken"];
+                                        string refreshToken = tokens["refreshToken"];
+                                        // Use the tokens here
+                                    }
+
+                                    // Generate JWT token
 
                                     response.Message = "Success";
                                     response.Status = 200;
                                     response.Data = new
                                     {
-                                        Token = token,
+                                        Token = tokens,
                                         User = user
                                     };
                                 }
@@ -478,71 +502,83 @@ namespace Webapiwithado.DataAccess
 
 
 
-        public async Task<ResponseModel> CreateNewUserAsync (User user)
 
 
+        public async Task<User> GetUserDataByUsernameAsync(string username)
         {
-
-
+            User user = new User();
             try
             {
                 using(SqlConnection sqlConnection = new SqlConnection(_connectionString))
                 {
                     await sqlConnection.OpenAsync();
-
-                    
-
-                    
-                    using(SqlCommand sqlCommand = new SqlCommand("createnewuser", sqlConnection))
+                using(SqlCommand sqlCommand = new SqlCommand("getuserdatabyusername",sqlConnection))
                     {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        sqlCommand.Parameters.AddWithValue("@username", username);
 
+                        using(SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            if(await sqlDataReader.ReadAsync())
+                            {
+                                user.UserId = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("userid"));
+                                user.UserName = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("username")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("username"));
+                                user.Email = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("email")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("email"));
+                                user.Photo = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("photo")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("photo"));
+                                user.IsVerified = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("isverified"));
+                                user.SignedInWithGoogle = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("signedinwithgoogle"));
+                                user.Otp = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("otp")) ? 0 : sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("otp"));
+                            }
+
+                            return user;
+                        }
+                    }
+                }
+
+            }
+
+            catch (Exception ex)
+            {
+                // Log or handle the exception as needed
+                throw new Exception("Failed to retrieve user data", ex);
+            }
+        }
+        
+
+
+
+
+        public async Task<bool> UpdateUserProfilePicture(string photoPath, int userId)
+        {
+            try
+            {
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using (SqlCommand sqlCommand = new SqlCommand("updateuserprofilepicture", sqlConnection))
+                    {
                         sqlCommand.CommandType = CommandType.StoredProcedure;
 
-
-                        sqlCommand.Parameters.AddWithValue("@username", user.UserName);
-                        sqlCommand.Parameters.AddWithValue("@password", user.Password);
-                        sqlCommand.Parameters.AddWithValue("@email", user.Email);
-                        sqlCommand.Parameters.AddWithValue("@photo", user.Photo);
-
+                        sqlCommand.Parameters.AddWithValue("@photo", photoPath);
+                        sqlCommand.Parameters.AddWithValue("@userid", userId);
 
                         int rowsAffected = await sqlCommand.ExecuteNonQueryAsync();
+                        return rowsAffected > 0;
 
-                        if (rowsAffected > 0)
-                        {
-                            return new ResponseModel
-                            {
-                                Message = "Success",
-                                Status = 200,
-                                Data = null
-                            };
-                        }
-                        else
-                        {
-                            return new ResponseModel
-                            {
-                                Message = "Failed",
-                                Status = 500,
-                                Data = null
-                            };
-                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
-                ResponseModel responseModel = new ResponseModel
-                {
-                    Message = "Failed",
-                    Status = 500,
-                    Data = JsonConvert.SerializeObject(ex.Message)
-                };
-                return responseModel;
+                return false;
+                // Log or handle the exception as needed
+                throw new Exception("Failed to update user profile picture", ex);
             }
         }
 
 
-      
+
         private bool VerifyPassword(string enteredPassword, string storedPasswordHash)
         {
             // Implement the hashing comparison as described in the earlier example

@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 
-builder.Services.AddTransient<IEmailSender, EmailSender>();
+builder.Services.AddSingleton<IEmailSender, EmailSender>();
 
 builder.Services.AddAuthentication(x =>
 {
@@ -39,9 +39,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<WidgetDataAcess>();
 builder.Services.AddSingleton<UserDataAccess>();
 builder.Services.AddSingleton<QuizDataAccess>();
+builder.Services.AddSingleton<MailDataAccess>();
 builder.Services.AddSingleton<CreateJWT>();
+builder.Services.AddSingleton<EmailSender>();
+builder.Services.AddSingleton<EmailService>();
 
 
+builder.Services.AddScoped<IEmailSender, EmailSender>();
 
 var app = builder.Build();
 

@@ -1,19 +1,28 @@
-﻿using Webapiwithado.Models;
+﻿using Microsoft.AspNetCore.Mvc;
+using Webapiwithado.Models;
 
 namespace Webapiwithado
 {
     public class FileUploadAPI
     {
-        public int ImgID { get; set; }
-        public string ImgName { get; set; }
+        [FromForm]
+        public int UserId { get; set; }
+
+        [FromForm]
         public IFormFile? files { get; set; }
-        public string? Users { get; set; }
     }
 
-    public class common
-    {
-        public FileUploadAPI fileUploadAPI { get; set; }
-        public User user { get; set; }
-        public List<User> ListUser { get; set; }
-    }
 }
+
+
+
+public class ImageUploadResponseModel
+    {
+        public string ImageName { get; set; }
+        public string ImagePath { get; set; }
+
+        public string Message { get; set; }
+
+        
+    }
+

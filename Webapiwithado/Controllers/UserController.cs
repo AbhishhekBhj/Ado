@@ -63,22 +63,7 @@ namespace Webapiwithado.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
             }
         }
-        [HttpPost]
-        [Route("AddUser")]
 
-        public async Task<IActionResult> AddUser([FromBody]User user)
-        {
-            try
-            {
-                var response = await _userDataAccess.CreateNewUserAsync(user);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
-        }
 
 
 
