@@ -138,6 +138,9 @@ namespace Webapiwithado.DataAccess
 
         public async Task<bool> SetOtpInUserTableAsync(int otp , string email)
         {
+
+            Console.WriteLine(otp+"otp");
+            Console.WriteLine(email+"email inside");
             try
             {
                 using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
@@ -152,6 +155,7 @@ namespace Webapiwithado.DataAccess
                         sqlCommand.Parameters.AddWithValue("@email", email);
 
                         int rowsAffected = await sqlCommand.ExecuteNonQueryAsync();
+                        Console.WriteLine(rowsAffected+"rows affected");
 
                         if (rowsAffected > 0)
                         {
@@ -170,91 +174,143 @@ namespace Webapiwithado.DataAccess
                
                 return false;
             }
-        }   
+        }
 
         public async Task<ResponseModel> CreateNewUser(UserRegisterModel user)
         {
             User user2 = new User();
+            int otp = GenerateOtp();
+            Console.WriteLine(user.UserName + " username");
+            Console.WriteLine(user.Email + " email");
 
-            Random random = new Random();
-            int otp = random.Next(100000, 999999);
-            
+            Dictionary<string, dynamic> myDictionary = new Dictionary<string, dynamic>();
+            UserLogin userLoginMode = new UserLogin
+            {
+                UserName = user.UserName,
+                Password = user.Password
+            };
+
             try
             {
-
-                using(SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
                 {
-                     await sqlConnection.OpenAsync();
+                    await sqlConnection.OpenAsync();
 
-                using(SqlCommand sqlCommand = new SqlCommand("createnewuser", sqlConnection))
+                    using (SqlCommand sqlCommand = new SqlCommand("createnewuser", sqlConnection))
                     {
-
-                    String    hashedPassword = PasswordHasher.HashPassword(user.Password);
+                        string hashedPassword = PasswordHasher.HashPassword(user.Password);
                         sqlCommand.CommandType = CommandType.StoredProcedure;
 
                         sqlCommand.Parameters.AddWithValue("@username", user.UserName);
-
                         sqlCommand.Parameters.AddWithValue("@password", hashedPassword);
                         sqlCommand.Parameters.AddWithValue("@email", user.Email);
 
-
-
-
-
-
                         int rowsAffected = await sqlCommand.ExecuteNonQueryAsync();
-                        if(rowsAffected > 0)
+                        if (rowsAffected > 0)
                         {
-
                             bool emailSent = await mailDataAccess.SendOtpEmailAsync(user.Email, otp);
+                            Console.WriteLine(emailSent + " email sent");
                             if (emailSent)
                             {
                                 bool otpSet = await SetOtpInUserTableAsync(otp, user.Email);
+                                Console.WriteLine(otpSet + " otp set");
                                 if (otpSet)
                                 {
                                     user2 = await GetUserDataByUsernameAsync(user.UserName);
+                                    Console.WriteLine(user2.ToString());
+                                    if (user2 != null)
+                                    {
+                                        var tokens = _createJWT.CreateJWTToken(userLoginMode);
+
+                                        string accessToken = tokens["accessToken"];
+                                        string refreshToken = tokens["refreshToken"];
+
+                                        // Add user details and tokens to the dictionary
+                                        myDictionary["user"] = user2;
+                                        myDictionary["accessToken"] = accessToken;
+                                        myDictionary["refreshToken"] = refreshToken;
+
+                                        return new ResponseModel
+                                        {
+                                            Message = "Success",
+                                            Status = 200,
+                                            Data = myDictionary
+                                        };
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("Failed to retrieve user data");
+                                        return new ResponseModel
+                                        {
+                                            Message = "Failed to retrieve user data",
+                                            Status = 500,
+                                            Data = null
+                                        };
+                                    }
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Failed to set OTP in user table");
+                                    return new ResponseModel
+                                    {
+                                        Message = "Failed to set OTP",
+                                        Status = 500,
+                                        Data = null
+                                    };
                                 }
                             }
-
-
-                            
-
-                            
-
-
-
-                            
-                            return new ResponseModel
+                            else
                             {
-                                Message = "Success",
-                                Status = 200,
-                                Data = user2
-                            };
+                                Console.WriteLine("Failed to send OTP email");
+                                return new ResponseModel
+                                {
+                                    Message = "Failed to send OTP email",
+                                    Status = 500,
+                                    Data = null
+                                };
+                            }
                         }
                         else
                         {
+                            Console.WriteLine("Failed to insert new user");
                             return new ResponseModel
                             {
-                                Message = "Failed",
+                                Message = "Failed to insert new user",
                                 Status = 500,
                                 Data = null
                             };
                         }
                     }
                 }
-
+            }
+            catch (SqlException sqlEx)
+            {
+                // Log the detailed SQL exception
+                Console.WriteLine($"SQL Error: {sqlEx.Message}");
+                return new ResponseModel
+                {
+                    Message = "Database operation failed",
+                    Status = 500,
+                    Data = JsonConvert.SerializeObject(sqlEx.Message)
+                };
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
-                ResponseModel responseModel = new ResponseModel
+                // Log the generic exception
+                Console.WriteLine($"Error: {ex.Message}");
+                return new ResponseModel
                 {
-                    Message = "Failed",
+                    Message = "An error occurred",
                     Status = 500,
                     Data = JsonConvert.SerializeObject(ex.Message)
                 };
-                return responseModel;
             }
+        }
+
+        private int GenerateOtp()
+        {
+            Random random = new Random();
+            return random.Next(100000, 999999);
         }
 
 
@@ -290,6 +346,8 @@ namespace Webapiwithado.DataAccess
                                         Photo = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("photo")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("Photo")),
                                            IsVerified = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("isverified")),
                                            SignedInWithGoogle = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("signedinwithgoogle")),
+
+                                           Otp = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("otp")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("otp"))
                                     
                                     };
 
@@ -509,42 +567,50 @@ namespace Webapiwithado.DataAccess
             User user = new User();
             try
             {
-                using(SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
                 {
                     await sqlConnection.OpenAsync();
-                using(SqlCommand sqlCommand = new SqlCommand("getuserdatabyusername",sqlConnection))
+                    using (SqlCommand sqlCommand = new SqlCommand("getuserdatabyusername", sqlConnection))
                     {
                         sqlCommand.CommandType = CommandType.StoredProcedure;
                         sqlCommand.Parameters.AddWithValue("@username", username);
 
-                        using(SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
                         {
-                            if(await sqlDataReader.ReadAsync())
+                            if (await sqlDataReader.ReadAsync())
                             {
+                                Console.WriteLine("inside");
+
                                 user.UserId = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("userid"));
                                 user.UserName = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("username")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("username"));
                                 user.Email = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("email")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("email"));
                                 user.Photo = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("photo")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("photo"));
                                 user.IsVerified = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("isverified"));
                                 user.SignedInWithGoogle = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("signedinwithgoogle"));
-                                user.Otp = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("otp")) ? 0 : sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("otp"));
+                                user.Otp = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("otp")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("otp"));
+
+                                // Print user data to console for debugging
+                                Console.WriteLine($"UserId: {user.UserId}");
+                                Console.WriteLine($"UserName: {user.UserName}");
+                                Console.WriteLine($"Email: {user.Email}");
+                                Console.WriteLine($"Photo: {user.Photo}");
+                                Console.WriteLine($"IsVerified: {user.IsVerified}");
+                                Console.WriteLine($"SignedInWithGoogle: {user.SignedInWithGoogle}");
+                                Console.WriteLine($"Otp: {user.Otp}");
                             }
 
                             return user;
                         }
                     }
                 }
-
             }
-
             catch (Exception ex)
             {
                 // Log or handle the exception as needed
+                Console.WriteLine($"Error: {ex.Message}");
                 throw new Exception("Failed to retrieve user data", ex);
             }
         }
-        
-
 
 
 

@@ -14,7 +14,7 @@
 
         public int? IsVerified { get; set; }
 
-        public int? Otp { get; set; }
+        public String? Otp { get; set; }
 
         public int? SignedInWithGoogle { get; set; }
 

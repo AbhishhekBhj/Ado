@@ -26,11 +26,43 @@ namespace Webapiwithado.Controllers
             _emailSender = emailSender;
         }
 
-       
+
+
+        [HttpPost("send-verification-email")]
+        public async Task<IActionResult> SendVerificationEmail([FromBody] Dictionary<string, string> email)
+        {
+            try
+            {
+                string receiverEmail = email["email"];
+
+                // Generate a random OTP
+                Random random = new Random();
+                int otp = random.Next(100000, 999999);
+
+                // Construct the email body
+                string subject = "🎉 Verify Your Email Address - Quiz App 🎉";
+                string body = $"👋 Hello Quiz Master!\n\n" +
+                              "Thank you for signing up for our quiz app! To complete your registration, please verify your email address by using the OTP (One-Time Password) provided below:\n\n" +
+                              $"Your OTP: {otp} 🔐\n\n" +
+                              "This OTP is valid for the next 10 minutes. Please do not share this OTP with anyone.\n\n" +
+                              "If you did not request this email, please ignore it.\n\n" +
+                              "Ready to start quizzing? Let's go! 🚀\n\n" +
+                              "Best regards,\nHamro  Quiz App Team 🌟";
+
+                // Send the email
+                await _emailSender.SendEmailAsync(receiverEmail, subject, body);
+                await _userDataAccess.SetOtpInUserTableAsync(otp, receiverEmail);
+                return Ok(new { Message = "Verification email sent successfully", OTP = otp });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while sending the email", Error = ex.Message });
+            }
+        }
 
 
         [HttpPost("verify-otp")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> VerifyOtp([FromBody] OtpVerfifyModel otpVerfifyModel)
         {
             try
