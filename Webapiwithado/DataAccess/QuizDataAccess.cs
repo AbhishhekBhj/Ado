@@ -237,6 +237,9 @@ namespace Webapiwithado.DataAccess
                                     quizDTO.QuizID = Convert.ToInt32(sqlDataReader["quizid"]);
                                     quizDTO.QuizTitle = sqlDataReader["title"].ToString();
                                     quizDTO.QuizDescription = sqlDataReader["description"].ToString();
+                                    quizDTO.Photo = sqlDataReader["photo"].ToString();
+                                    quizDTO.ContentType = sqlDataReader["TypeName"].ToString();
+                                    
                                 }
 
                                 int questionID = Convert.ToInt32(sqlDataReader["questionid"]);

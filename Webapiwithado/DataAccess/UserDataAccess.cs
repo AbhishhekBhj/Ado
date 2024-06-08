@@ -46,7 +46,7 @@ namespace Webapiwithado.DataAccess
                     using (SqlCommand sqlCommand = new SqlCommand("verifyotp", sqlConnection))
                     {
                         sqlCommand.CommandType = CommandType.StoredProcedure;
-                        sqlCommand.Parameters.AddWithValue("@email", otpVerifyModel.Email);  // Corrected parameter name
+                        sqlCommand.Parameters.AddWithValue("@email", otpVerifyModel.Email);  
 
                         using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
                         {

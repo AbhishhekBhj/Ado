@@ -12,10 +12,18 @@ namespace Webapiwithado.Models
 
         public DateTime QuizDate { get; set; }
 
+public String? Photo { get; set; }
+
+        public int? ContentType;
+
+        public string? TypeName { get; set; }
+
 
 
 
 
 
     }
+
+
 }
