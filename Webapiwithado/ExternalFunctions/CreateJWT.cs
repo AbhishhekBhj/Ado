@@ -15,6 +15,47 @@ namespace Webapiwithado.ExternalFunctions
             _configuration = configuration;
         }
 
+        public Dictionary<string, string>? CreateJWTToken(UserLoginGoogle userLoginGoogle)
+        {
+            if (userLoginGoogle != null)
+            {
+                // Modify the token generation logic for Google login
+                // Example: Include Google-specific claims in the token
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var key = System.Text.Encoding.UTF8.GetBytes(_configuration["JwtSettings:Key"]!);
+
+                var tokenDescriptor = new SecurityTokenDescriptor
+                {
+                    Subject = new ClaimsIdentity(
+                        new Claim[]
+                        {
+                        // Add Google-specific claims here
+                       
+                        new Claim("Email", userLoginGoogle.Email)
+                        }
+                    ),
+                    Expires = DateTime.UtcNow.AddMinutes(15),
+                    SigningCredentials = new SigningCredentials(
+                        new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                };
+
+                var token = tokenHandler.CreateToken(tokenDescriptor);
+                string tokenString = tokenHandler.WriteToken(token);
+
+                // Generate refresh token (modify as needed)
+                string refreshToken = GenerateRefreshToken(userLoginGoogle);
+
+                // Create and return a dictionary with tokens
+                return new Dictionary<string, string>()
+                {
+                    ["accessToken"] = tokenString,
+                    ["refreshToken"] = refreshToken
+                };
+            }
+
+            return null;
+        }
+
         public Dictionary<string, string>? CreateJWTToken(UserLogin userLogin)
         {
             if (userLogin != null)
@@ -53,6 +94,40 @@ namespace Webapiwithado.ExternalFunctions
             return null;
         }
 
+        public string GenerateRefreshToken(UserLoginGoogle userLoginGoogle)
+        {
+            // 1. Set longer expiry for refresh token
+            var refreshExpires = DateTime.UtcNow.AddDays(30); // Adjust expiry as needed
+
+            // 2. Include additional claims specific to refresh token
+            var refreshClaims = new Claim[]
+            {
+        // Add Google-specific claims for refresh token
+        new Claim("Email", userLoginGoogle.Email),
+        // Add a unique identifier for the refresh token itself
+        new Claim("jti", Guid.NewGuid().ToString()) // Replace with your logic for unique identifier
+            };
+
+            // 3. Implement secure storage and management for refresh tokens (not shown here)
+            // ... store the refresh token with additional info like creation time, user association etc.
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(refreshClaims),
+                Expires = refreshExpires,
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_configuration["JwtSettings:Key"]!)),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var refreshToken = tokenHandler.CreateToken(tokenDescriptor);
+            string refreshTokenString = tokenHandler.WriteToken(refreshToken);
+
+            return refreshTokenString;
+        }
+
+
         public string GenerateRefreshToken(UserLogin userLogin)
         {
             // 1. Set longer expiry for refresh token
@@ -85,17 +160,6 @@ namespace Webapiwithado.ExternalFunctions
             return refreshTokenString;
         }
 
-        // Placeholder for refresh token validation and exchange endpoint
-        //public string ValidateAndExchangeRefreshToken(string refreshToken)
-        //{
-        //    // 1. Implement logic to validate the refresh token (expiry, association with user)
-        //    // ... check validity in secure storage
-
-        //    // 2. Upon successful validation, generate a new access token
-        //    var userLogin = // Retrieve user info based on refresh token validation (replace with your logic)
-        //    string newAccessToken = CreateJWTToken(userLogin).accessToken; // Call existing method
-
-        //    return newAccessToken;
-        //}
+      
     }
 }

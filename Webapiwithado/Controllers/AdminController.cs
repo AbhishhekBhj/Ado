@@ -118,13 +118,44 @@ namespace Webapiwithado.Controllers
             }
         }
 
-        // DELETE api/<AdminController>/5
-        [HttpDelete("DeleteQuiz")]
-        public async Task<IActionResult> DeleteQuizAsync([FromBody] Dictionary<String, int> deleteMap)
+        [HttpPost("AddNewQuestion")]
+
+        public async Task<IActionResult> AddNewQuestionAsync([FromBody] AddQuestionDTO questionDTO)
         {
             try
             {
-                var response = await _adminDataAccess.DeleteQuizAsync(deleteMap["id"]);
+                var response = await _adminDataAccess.AddQuestionAsync(questionDTO);
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        // DELETE api/<AdminController>/5
+        [HttpDelete("DeleteQuiz")]
+        public async Task<IActionResult> DeleteQuizAsync([FromBody] Dictionary<string, int> deleteMap)
+        {
+            try
+            {
+                var response = await _adminDataAccess.DeleteQuizAsync(Convert.ToInt32(deleteMap["id"]));
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("GetAllContentType")]
+        public async Task<IActionResult> GetAllContentTypeAsync()
+        {
+            try
+            {
+                var response = await _adminDataAccess.GetAllContentTypeAync();
                 return Ok(response);
 
             }

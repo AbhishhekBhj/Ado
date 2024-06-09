@@ -23,7 +23,7 @@ namespace Webapiwithado.Interface
 
         Task<ResponseModel> GetQuestionByQuizIdAsync(int id);
 
-        Task<ResponseModel> AddQuestionAsync();
+        Task<ResponseModel> AddQuestionAsync(AddQuestionDTO addQuestionDTO);
 
         Task<ResponseModel> UpdateQuestionAsync(QuizUpdateDto quizUpdateDto);
 
@@ -69,6 +69,8 @@ namespace Webapiwithado.Interface
         Task<ResponseModel> Get3BestPerformersForQuizbyIdAsync(int id);
 
         Task<ResponseModel> Get3WorstPerformersForQuizbyIdAsync(int id);
+
+        Task<ResponseModel> GetAllContentTypeAync();
 
 
 

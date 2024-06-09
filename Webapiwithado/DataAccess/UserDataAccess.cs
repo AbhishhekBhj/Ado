@@ -176,6 +176,74 @@ namespace Webapiwithado.DataAccess
             }
         }
 
+        public async Task<ResponseModel> RegisterUserWithGoogle(UserRegisterModel user)
+        {
+            try
+            {
+                // Validate input
+                if (user == null)
+                    return new ResponseModel { Message = "Invalid user data", Status = 400, Data = null };
+
+                // Hash password (you should hash the password before passing it to this method)
+                string hashedPassword = PasswordHasher.HashPassword(user.Password);
+
+                // Call stored procedure to register user
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+                    using (SqlCommand sqlCommand = new SqlCommand("signupwithgoogle", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        sqlCommand.Parameters.AddWithValue("@username", user.UserName);
+                        sqlCommand.Parameters.AddWithValue("@password", hashedPassword);
+                        sqlCommand.Parameters.AddWithValue("@email", user.Email);
+                        sqlCommand.Parameters.AddWithValue("@isverified", 1);  // Default value for isverified
+                        sqlCommand.Parameters.AddWithValue("@signedinwithgoogle", 1);  // Default value for signedinwithgoogle
+
+                        sqlCommand.Parameters.AddWithValue("@photo", user.Photo);
+
+                        // Execute the query
+                        using (SqlDataReader reader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            if (reader.HasRows)
+                            {
+                                // User registered successfully, retrieve user data
+                                await reader.ReadAsync(); // Move to the first row
+                                User registeredUser = new User
+                                {
+                                    UserId = reader.GetInt32(reader.GetOrdinal("userid")),
+                                    UserName = reader.GetString(reader.GetOrdinal("username")),
+                                    Email = reader.GetString(reader.GetOrdinal("email")),
+                                    Photo = reader.GetString(reader.GetOrdinal("photo")),
+                                    IsVerified = reader.GetInt32(reader.GetOrdinal("isverified")),
+                                    SignedInWithGoogle = reader.GetInt32(reader.GetOrdinal("signedinwithgoogle"))
+                                    // You can retrieve other user properties if needed
+                                };
+
+                                return new ResponseModel { Message = "User registered successfully", Status = 200, Data = registeredUser };
+                            }
+                            else
+                            {
+                                // No rows returned, registration failed
+                                return new ResponseModel { Message = "Failed to register user", Status = 500, Data = null };
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+                Console.WriteLine(sqlEx.Message);
+                // Log SQL exception
+                return new ResponseModel { Message = "Database operation failed", Status = 500,  };
+            }
+            catch (Exception ex)
+            {
+                // Log generic exception
+                return new ResponseModel { Message = "An error occurred", Status = 500,  };
+            }
+        }
+
         public async Task<ResponseModel> CreateNewUser(UserRegisterModel user)
         {
             User user2 = new User();
@@ -312,6 +380,72 @@ namespace Webapiwithado.DataAccess
             Random random = new Random();
             return random.Next(100000, 999999);
         }
+
+
+
+
+        public async Task<ResponseModel> LoginUserWithGoogle(UserLoginGoogle userLoginGoogle)
+        {
+            var response = new ResponseModel();
+
+            try
+            {
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using (SqlCommand sqlCommand = new SqlCommand("loginwithgoogle", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+                        sqlCommand.Parameters.AddWithValue("@email", userLoginGoogle.Email);
+
+                        using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            if (await sqlDataReader.ReadAsync())
+                            {
+                                var user = new User
+                                {
+                                    UserId = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("userid")),
+                                    UserName = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("username")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("username")),
+                                    Email = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("email")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("email")),
+                                    Photo = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("photo")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("photo")),
+                                    IsVerified = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("isverified")),
+                                    SignedInWithGoogle = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("signedinwithgoogle")),
+                                    Otp = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("otp")) ? "" : sqlDataReader.GetString(sqlDataReader.GetOrdinal("otp"))
+                                };
+
+                                var tokens = _createJWT.CreateJWTToken(userLoginGoogle);
+
+                                response.Message = "Success";
+                                response.Status = 200;
+                                response.Data = new
+                                {
+                                    Token = tokens,
+                                    User = user
+                                };
+                            }
+                            else
+                            {
+                                // Handle case where user is not found or not signed in with Google
+                                response.Message = "User not found or not signed in with Google";
+                                response.Status = 404;
+                                response.Data = null;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                response.Message = "Failed";
+                response.Status = 500;
+                response.Data = ex.Message;
+            }
+
+            return response;
+        }
+
 
 
         public async Task<ResponseModel> LoginUser(UserLogin userLogin)

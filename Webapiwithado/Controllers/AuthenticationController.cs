@@ -95,6 +95,54 @@ namespace Webapiwithado.Controllers
         }
 
         [HttpPost]
+        [Route("RegisterGoogle")]
+
+        public async Task<IActionResult> RegisterGoogle([FromBody] UserRegisterModel user)
+        {
+            try
+            {
+                var response = await _userDataAccess.RegisterUserWithGoogle(user);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+        [HttpPost]
+        [Route("LoginGoogle")]
+
+        public async Task<IActionResult> LoginGoogle([FromBody] UserLoginGoogle user)
+        {
+            try
+            {
+                var response = await _userDataAccess.LoginUserWithGoogle(user);
+
+                if (response.Status == 200)
+                {
+                    return Ok(response);
+                }
+                else if (response.Status == 401)
+                {
+                    return Unauthorized(response);
+                }
+                else if (response.Status == 404)
+                {
+                    return NotFound(response);
+                }
+                else
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, response);
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+        [HttpPost]
         [Route("Login")]
         public async Task<IActionResult> Login([FromBody] UserLogin user)
         {

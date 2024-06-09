@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System.Data;
 using System.Data.SqlClient;
 using System.Data.SqlTypes;
 using Webapiwithado.DTOs;
@@ -332,17 +333,17 @@ namespace Webapiwithado.DataAccess
             }
             catch(SqlException ex)
             {
+                Console.WriteLine(ex.Message);
                 return new ResponseModel { Status = 500, Message = ex.Message };
             }
             catch(Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 return new ResponseModel { Status = 500, Message = ex.Message };
 
 
             }
-            {
-
-            }
+            
         }
 
         public Task<ResponseModel> AddContentAsync()
@@ -355,10 +356,7 @@ namespace Webapiwithado.DataAccess
             throw new NotImplementedException();
         }
 
-        public Task<ResponseModel> AddQuestionAsync()
-        {
-            throw new NotImplementedException();
-        }
+        
 
         
 
@@ -464,5 +462,128 @@ namespace Webapiwithado.DataAccess
         {
             throw new NotImplementedException();
         }
+
+        public async Task<ResponseModel> GetAllContentTypeAync()
+        {
+            try
+            {
+                using(SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using(SqlCommand sqlCommand = new SqlCommand("getallcontenttype", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+
+                        List<ContentType> contentTypes = new List<ContentType>();
+
+                        using(SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            while(await sqlDataReader.ReadAsync())
+                            {
+                                ContentType contentType = new ContentType
+                                {
+                                    ContentTypeID = sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("ContentTypeID")),
+                                    TypeName = sqlDataReader.GetString(sqlDataReader.GetOrdinal("TypeName"))
+                                };
+
+                                contentTypes.Add(contentType);
+                            }
+                        }
+
+                        return new ResponseModel { Status = 200, Message = "Content types fetched successfully", Data = contentTypes };
+                    }
+                }
+
+            }
+            catch (SqlException ex)
+            {
+                    return new ResponseModel { Status = 500, Message = ex.Message };
+                }
+    
+                catch (Exception ex)
+            {
+                    return new ResponseModel { Status = 500, Message = ex.Message };
+                }
+        }
+
+        public async Task<ResponseModel> AddQuestionAsync(AddQuestionDTO addQuestionDTO)
+        {
+            try
+            {
+                
+
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    SqlTransaction sqlTransaction = sqlConnection.BeginTransaction();
+
+
+                    //this will insert and return back the question id
+                    string insertquery = @"
+                    INSERT INTO hamroquizapp.dbo.Question (QuizId, QuestionText, QuestionType)
+                    OUTPUT INSERTED.QuestionId
+                    VALUES (@QuizId, @QuestionText, @QuestionType)";
+
+                    using(SqlCommand sqlCommand = new SqlCommand(insertquery, sqlConnection, sqlTransaction))
+                    {
+                        sqlCommand.Parameters.AddWithValue("@QuizId", (object)addQuestionDTO.QuizID ?? DBNull.Value);
+                        sqlCommand.Parameters.AddWithValue("@QuestionText", addQuestionDTO.QuestionText);
+                        sqlCommand.Parameters.AddWithValue("@QuestionType", (object)addQuestionDTO.QuestionType ?? DBNull.Value);
+                   
+                    
+
+
+                        //get the question id of the question that was just inserted
+                    int questionId = (int)await sqlCommand.ExecuteScalarAsync();
+
+
+
+                        string insertOptionQuery = @"
+INSERT INTO hamroquizapp.dbo.[Option] (QuestionId, OptionText, IsCorrect)
+                    VALUES (@QuestionId, @OptionText, @IsCorrect)";
+
+
+                        foreach (var option in addQuestionDTO.Options)
+                        {
+                            using (SqlCommand sqlCommand1 = new SqlCommand(insertOptionQuery, sqlConnection, sqlTransaction))
+                            {
+                                sqlCommand1.Parameters.AddWithValue("@QuestionId", questionId);
+                                sqlCommand1.Parameters.AddWithValue("@OptionText", option.OptionText);
+                                sqlCommand1.Parameters.AddWithValue("@IsCorrect", option.IsCorrect);
+
+                                await sqlCommand1.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        sqlTransaction.Commit();
+
+                        return new ResponseModel { Status = 200, Message = "Question added successfully" };
+                    
+                    
+                    
+                    
+                    
+                    }
+
+
+
+                }
+
+            }
+            catch (SqlException ex)
+            {
+                return new ResponseModel { Status = 500, Message = ex.Message };
+            }
+
+            catch (Exception ex)
+            {
+                return new ResponseModel { Status = 500, Message = ex.Message };
+            }
+        }
+    
+    
+    
     }
 }
