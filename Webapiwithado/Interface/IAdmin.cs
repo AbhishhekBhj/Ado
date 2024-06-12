@@ -6,6 +6,8 @@ namespace Webapiwithado.Interface
     public interface IAdmin
     {
 
+        Task<ResponseModel> GetDashBoardDataAsync();
+
         Task<ResponseModel> GetAllQuizesAsync();
 
         Task<ResponseModel> GetQuizByIdAsync(int id);
@@ -25,7 +27,7 @@ namespace Webapiwithado.Interface
 
         Task<ResponseModel> AddQuestionAsync(AddQuestionDTO addQuestionDTO);
 
-        Task<ResponseModel> UpdateQuestionAsync(QuizUpdateDto quizUpdateDto);
+        Task<ResponseModel> UpdateQuestionAsync(UpdateQuestionDTO updateQuestionDTO );
 
         Task<ResponseModel> DeleteQuestionAsync(int id);
 
@@ -41,7 +43,7 @@ namespace Webapiwithado.Interface
         Task<ResponseModel> DeleteOptionAsync(int id);
 
 
-        Task<ResponseModel> GetAllUsersAsync();
+        Task<ResponseModel> GetAllUsersAsync(int pagesize, int rowsperpage );
 
         Task<ResponseModel> GetUserByIdAsync(int id);
 

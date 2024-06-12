@@ -21,6 +21,40 @@ namespace Webapiwithado.Controllers
         }
 
 
+        [HttpGet("GetDashBoardData")]
+
+        public async Task<IActionResult> GetDashBoardDataAsync()
+        {
+            try
+            {
+                var response = await _adminDataAccess.GetDashBoardDataAsync();
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("GetAllUsers/{pageNumber}/{rowsPerPage}")]
+
+        public async Task<IActionResult> GetAllUsersAsync([FromRoute] int pageNumber, int rowsPerPage)
+        {
+           
+            try
+            {
+                var response = await _adminDataAccess.GetAllUsersAsync(pageNumber,rowsPerPage);
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+
         [HttpPost("AddQuiz")]
 
         public async Task<IActionResult> AddQuizAsync([FromBody] QuizUpdateDto quizDTO)
@@ -149,6 +183,51 @@ namespace Webapiwithado.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+
+        [HttpDelete("DeleteQuestion/{id}")]
+
+        public async Task<IActionResult> DeleteQuestionAsync([FromRoute] int id)
+        {
+            try
+            {
+                var response = await _adminDataAccess.DeleteQuestionAsync(Convert.ToInt32(id));
+                return Ok(response);
+
+            }
+
+            catch(Exception ex)
+            {
+
+                return(StatusCode(500, ex.Message));
+
+
+            }
+        }
+
+        [HttpPut("UpdateQuestionDetails")]
+
+        public async Task<IActionResult> UpdateQuestionAsync([FromBody] UpdateQuestionDTO updateQuestionDTO)
+        {
+            try
+            {
+                var response = await _adminDataAccess.UpdateQuestionAsync(updateQuestionDTO);
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+
+
+
+
+
+
+
 
         [HttpGet("GetAllContentType")]
         public async Task<IActionResult> GetAllContentTypeAsync()

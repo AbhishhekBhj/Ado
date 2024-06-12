@@ -18,6 +18,15 @@
 
         public int? SignedInWithGoogle { get; set; }
 
+        public DateTime CreatedAt { get; set; }
+
+        public int? RoleId { get; set; }
+
+        public string? RoleName { get; set; }
+
+        public DateTime UpdatedOn { get; set; }
+
+
 
     }
 

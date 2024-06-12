@@ -370,14 +370,103 @@ namespace Webapiwithado.DataAccess
             throw new NotImplementedException();
         }
 
-        public Task<ResponseModel> DeleteOptionAsync(int id)
+        public async Task<ResponseModel> DeleteOptionAsync(int id)
         {
-            throw new NotImplementedException();
+            try
+            {
+
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+
+                    using (SqlCommand sqlCommand = new SqlCommand("deleteanoption", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+
+                        sqlCommand.Parameters.AddWithValue("@optionid", id);
+
+                        int rowsAffected = await sqlCommand.ExecuteNonQueryAsync();
+
+                        if (rowsAffected > 0)
+                        {
+                            return new ResponseModel { Status = 200, Message = "Option Object Deleted Successfully", Data = null };
+                        }
+
+                        else
+                        {
+                            return new ResponseModel { Status = 400, Message = "Option Object Delete Unsucessfully" };
+                        }
+
+
+                    }
+                }
+            }
+            catch (SqlAlreadyFilledException ex)
+            {
+
+                return new ResponseModel { Status = 500, Message = ex.ToString() };
+
+
+
+            }
+            catch (Exception ex)
+            {
+                return new ResponseModel { Status = 500, Message = ex.ToString() };
+
+
+            }
         }
 
-        public Task<ResponseModel> DeleteQuestionAsync(int id)
+        public async Task<ResponseModel> DeleteQuestionAsync(int id)
         {
-            throw new NotImplementedException();
+            try {
+            
+            using(SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+
+                    using(SqlCommand sqlCommand = new SqlCommand("deletequizquestion", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+
+                        sqlCommand.Parameters.AddWithValue("@questionid", id);
+
+                  int rowsAffected =       await sqlCommand.ExecuteNonQueryAsync();
+
+                        if (rowsAffected > 0)
+                        {
+                            return new ResponseModel {Status=200, Message="Question Object Deleted Successfully", Data=null };
+                        }
+
+                        else
+                        {
+                            return new ResponseModel { Status = 400, Message = "Question Object Delete Unsucessfully" };
+                        }
+
+
+                    }
+                }
+            
+            
+            
+            }
+            catch(SqlAlreadyFilledException ex)
+            {
+                return new ResponseModel { Status=500,Message=ex.ToString()};
+            }
+            catch(SqlException ex)
+            {
+                return new ResponseModel { Status = 500, Message = ex.ToString() };
+
+            }
+
+            catch(Exception ex)
+            {
+                return new ResponseModel { Status = 500, Message = ex.ToString() };
+
+            }
         }
 
        
@@ -404,9 +493,55 @@ namespace Webapiwithado.DataAccess
             throw new NotImplementedException();
         }
 
-        public Task<ResponseModel> GetAllUsersAsync()
+        public async Task<ResponseModel> GetAllUsersAsync(int pagesize, int rowsperpage)
         {
-            throw new NotImplementedException();
+            List<User> users = new List<User>();
+
+            try
+            {
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using (SqlCommand sqlCommand = new SqlCommand("getalluserdata", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+
+                        sqlCommand.Parameters.AddWithValue("@pagenumber", pagesize);
+                        sqlCommand.Parameters.AddWithValue("@rowsperpage", rowsperpage);
+
+                        using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            while (await sqlDataReader.ReadAsync())
+                            {
+                                User user = new User
+                                {
+                                    UserId = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("userid")) ? 0 : sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("userid")),
+                                    UserName = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("username")) ? string.Empty : sqlDataReader.GetString(sqlDataReader.GetOrdinal("username")),
+                                    Email = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("email")) ? string.Empty : sqlDataReader.GetString(sqlDataReader.GetOrdinal("email")),
+                                    Photo = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("photo")) ? string.Empty : sqlDataReader.GetString(sqlDataReader.GetOrdinal("photo")),
+                                    Password = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("password")) ? string.Empty : sqlDataReader.GetString(sqlDataReader.GetOrdinal("password")),
+                                    IsVerified = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("isverified")) ? 0 : sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("isverified")),
+                                    Otp = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("otp")) ? string.Empty : sqlDataReader.GetString(sqlDataReader.GetOrdinal("otp")),
+                                    RoleName = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("rollname")) ? string.Empty : sqlDataReader.GetString(sqlDataReader.GetOrdinal("rollname")),
+                                    CreatedAt = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("created_at")) ? DateTime.MinValue : sqlDataReader.GetDateTime(sqlDataReader.GetOrdinal("created_at")),
+                               SignedInWithGoogle = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("signedinwithgoogle")) ? 0 : sqlDataReader.GetInt32(sqlDataReader.GetOrdinal("signedinwithgoogle")),
+                                    UpdatedOn = sqlDataReader.IsDBNull(sqlDataReader.GetOrdinal("updated_on")) ? DateTime.MinValue : sqlDataReader.GetDateTime(sqlDataReader.GetOrdinal("updated_on"))
+                                
+                                };
+
+                                users.Add(user);
+                            }
+                        }
+                    }
+                }
+
+                return new ResponseModel { Status = 200, Message = "User Data Fetched Successfully", Data = users };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseModel { Status = 500, Message = ex.ToString() };
+            }
         }
 
         public Task<ResponseModel> GetOptionByQuestionIdAsync(int id)
@@ -441,9 +576,58 @@ namespace Webapiwithado.DataAccess
             throw new NotImplementedException();
         }
 
-        public Task<ResponseModel> UpdateQuestionAsync()
+        public async Task<ResponseModel> UpdateQuestionAsync(UpdateQuestionDTO updateQuestionDTO)
         {
-            throw new NotImplementedException();
+            try
+            {
+
+                using(SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using(SqlCommand sqlCommand = new SqlCommand("updatequestiondetails",sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+
+                        sqlCommand.Parameters.AddWithValue("@questionid", updateQuestionDTO.QuestionID);
+                        sqlCommand.Parameters.AddWithValue("@questionText", updateQuestionDTO.QuestionText);
+                        sqlCommand.Parameters.AddWithValue("@questionType", updateQuestionDTO.QuestionType);
+
+
+                        int rowsAffected = await sqlCommand.ExecuteNonQueryAsync();
+
+                        if (rowsAffected > 0)
+                        {
+                            return new ResponseModel { 
+                            Status=200, Message="Question Object Updated Successfully"};
+                        }
+
+                        else
+                        {
+                            return new ResponseModel
+                            {
+                                Status = 400,
+                                Message = "Question Object Update Unsuccessful"
+                            };
+                        }
+
+
+
+                    }
+                }
+
+            }
+            catch(SqlAlreadyFilledException ex)
+            {
+                return new ResponseModel { Status=500,Message=ex.ToString()};
+
+            }
+
+            catch (Exception ex)
+            {
+                return new ResponseModel { Status = 500, Message = ex.ToString() };
+
+            }
         }
 
         
@@ -458,10 +642,7 @@ namespace Webapiwithado.DataAccess
             throw new NotImplementedException();
         }
 
-        public Task<ResponseModel> UpdateQuestionAsync(QuizUpdateDto quizUpdateDto)
-        {
-            throw new NotImplementedException();
-        }
+        
 
         public async Task<ResponseModel> GetAllContentTypeAync()
         {
@@ -582,8 +763,100 @@ INSERT INTO hamroquizapp.dbo.[Option] (QuestionId, OptionText, IsCorrect)
                 return new ResponseModel { Status = 500, Message = ex.Message };
             }
         }
-    
-    
-    
+
+        public async Task<ResponseModel> GetDashBoardDataAsync()
+        {
+            try
+            {
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                {
+                    await sqlConnection.OpenAsync();
+
+                    using (SqlCommand sqlCommand = new SqlCommand("GetAdminDashboardData", sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.StoredProcedure;
+
+                        using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        {
+                            Dashboard dashboardData = new Dashboard();
+
+                            // Read first result set (ObjectCounts)
+                            if (await sqlDataReader.ReadAsync())
+                            {
+                                dashboardData.TablesCount = new TablesCount
+                                {
+                                    QuizCount = sqlDataReader.GetInt32(0),
+                                    QuestionCount = sqlDataReader.GetInt32(1),
+                                    UserCount = sqlDataReader.GetInt32(2),
+                                    ContentCount = sqlDataReader.GetInt32(3)
+                                };
+                            }
+
+                            // Move to the next result set
+                            await sqlDataReader.NextResultAsync();
+
+                            // Read second result set (PopularQuizzes)
+                            List<PopularQuiz> popularQuizzes = new List<PopularQuiz>();
+                            while (await sqlDataReader.ReadAsync())
+                            {
+                                popularQuizzes.Add(new PopularQuiz
+                                {
+                                    QuizId = sqlDataReader.GetInt32(0),
+                                    QuizName = sqlDataReader.GetString(1),
+                                    TotalAttempt = sqlDataReader.GetInt32(2)
+                                });
+                            }
+                            dashboardData.PopularQuizzes = popularQuizzes;
+
+                            // Move to the next result set
+                            await sqlDataReader.NextResultAsync();
+
+                            // Read third result set (NewUserCount)
+                            if (await sqlDataReader.ReadAsync())
+                            {
+                                dashboardData.NewUserCount = sqlDataReader.GetInt32(0);
+                            }
+
+                            // Move to the next result set
+                            await sqlDataReader.NextResultAsync();
+
+                            // Read fourth result set (UserScores)
+                            List<UserScore> userScores = new List<UserScore>();
+                            while (await sqlDataReader.ReadAsync())
+                            {
+                                userScores.Add(new UserScore
+                                {
+                                    Username = sqlDataReader.GetString(0),
+                                    UserId = sqlDataReader.GetInt32(1),
+                                    QuizAttempt = sqlDataReader.GetInt32(2),
+                                    TotalScore = sqlDataReader.GetInt32(3)
+                                    
+                                });
+                            }
+
+                            // Set the UserScores property of the dashboardData object
+                            dashboardData.UserScores = userScores;
+
+                            return new ResponseModel
+                            {
+                                Status = 200,
+                                Message = "Success",
+                                Data = dashboardData
+                            };
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                return new ResponseModel { Status = 500, Message = ex.Message };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseModel { Status = 500, Message = ex.Message };
+            }
+        }
+
+        
     }
 }
