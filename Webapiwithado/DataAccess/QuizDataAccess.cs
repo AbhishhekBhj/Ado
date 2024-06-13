@@ -289,28 +289,28 @@ namespace Webapiwithado.DataAccess
         }
 
 
-        public async Task<ResponseModel> GetAllQuizAsync()
+        public async Task<ResponseModel> GetAllQuizAsync(int pageNumber, int pageSize)
         {
-
-
-
             try
             {
-
-                using(SqlConnection sqlConnection = new SqlConnection(_connectionString))
+                using (SqlConnection sqlConnection = new SqlConnection(_connectionString))
                 {
                     await sqlConnection.OpenAsync();
 
-                    var sqlQuery = "Select * from hamroquizapp.dbo.Quiz";
-
+                    // Change the SQL command to call the stored procedure
+                    var sqlQuery = "getallquiz";  // Name of the stored procedure
 
                     using (SqlCommand sqlCommand = new SqlCommand(sqlQuery, sqlConnection))
                     {
-                       using(SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
+                        sqlCommand.CommandType = CommandType.StoredProcedure;  // Set command type to stored procedure
+
+
+                        sqlCommand.Parameters.AddWithValue("@PageNumber", pageNumber);
+                        sqlCommand.Parameters.AddWithValue("@PageSize", pageSize);
+                        using (SqlDataReader sqlDataReader = await sqlCommand.ExecuteReaderAsync())
                         {
-                            
                             List<Quiz> quizList = new List<Quiz>();
-                            while(await sqlDataReader.ReadAsync())
+                            while (await sqlDataReader.ReadAsync())
                             {
                                 quizList.Add(
                                     new Quiz
@@ -318,43 +318,36 @@ namespace Webapiwithado.DataAccess
                                         QuizID = Convert.ToInt32(sqlDataReader["quizid"]),
                                         QuizTitle = sqlDataReader["title"].ToString(),
                                         QuizDescription = sqlDataReader["description"].ToString(),
-                                        QuizDate = Convert.ToDateTime(sqlDataReader["createdat"])
+                                        QuizDate = Convert.ToDateTime(sqlDataReader["createdat"]),
+                                        TypeName = sqlDataReader["typename"].ToString(),
+                                        Photo = sqlDataReader["photo"].ToString()
+                                        
                                     }
+                                );
+                            }
 
-                                    );
-
-
-
-                                }
-                            ResponseModel responseModel = new ResponseModel { 
-                            Data = (quizList),
-                            Message = "Success",
-                            Status = 200
+                            ResponseModel responseModel = new ResponseModel
+                            {
+                                Data = quizList,
+                                Message = "Success",
+                                Status = 200
                             };
                             return responseModel;
-
-
-                        };
-
-                        }
-
                         }
                     }
-
+                }
+            }
             catch (SqlException sqlEx)
             {
-                   ResponseModel responseModel = new ResponseModel
-                   {
+                ResponseModel responseModel = new ResponseModel
+                {
                     Message = "Failed",
                     Status = 500,
                     Data = JsonConvert.SerializeObject(sqlEx.Message)
                 };
                 return responseModel;
-                throw;
             }
-                    
-                }
-
+        }
 
 
         public async Task<ResponseModel> PostQuizScoreAsync(SubmitQuizScore submitQuizScore)

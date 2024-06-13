@@ -19,14 +19,14 @@ namespace Webapiwithado.Controllers
 
 
         [HttpGet]
-        [Route("GetAllQuiz")]
-        [Authorize] //this end point will now require a token to access
+        [Route("GetAllQuiz/{pageSize:int}/{pageNumber:int}")]
+        //[Authorize] //this end point will now require a token to access
 
-        public async Task<IActionResult> GetAllQuizAsync()
+        public async Task<IActionResult> GetAllQuizAsync(int pageSize, int pageNumber)
         {
             try
             {
-                ResponseModel responseModel = await _quizDataAccess.GetAllQuizAsync();
+                ResponseModel responseModel = await _quizDataAccess.GetAllQuizAsync(pageNumber,pageSize);
                 Console.WriteLine(responseModel.Data.Count.ToString());
                 return Ok(responseModel);
             }
@@ -38,7 +38,7 @@ namespace Webapiwithado.Controllers
 
         [HttpGet]
         [Route("GetUserScoreForParticularQuiz/{userId}/{quizId}")]
-        [Authorize]
+        //[Authorize]
 
         public async Task<IActionResult> GetUserScoreForParticularQuizAsync([FromRoute] int userId, [FromRoute] int quizId)
         {
@@ -56,7 +56,7 @@ namespace Webapiwithado.Controllers
 
         [HttpGet]
         [Route("GetUserBest3Quizes/{userId}")]
-        [Authorize]
+        //[Authorize]
 
         public async Task<IActionResult> GetUserBest3QuizesAsync([FromRoute] int userId)
         {
@@ -73,7 +73,7 @@ namespace Webapiwithado.Controllers
 
         [HttpGet]
         [Route("GetUserWorst3Quizes/{userId}")]
-        [Authorize]
+        //[Authorize]
 
         public async Task<IActionResult> GetUserWorst3QuizesAsync([FromRoute] int userId)
         {
@@ -91,7 +91,7 @@ namespace Webapiwithado.Controllers
 
         [HttpGet]
         [Route("GetQuizObjectByID/{quizId}")]
-        [Authorize]
+        //[Authorize]
         
 
         public async Task<IActionResult> GetQuizObjectByIDAsync([FromRoute] int quizId)
@@ -109,7 +109,7 @@ namespace Webapiwithado.Controllers
 
         [HttpPost]
         [Route("SubmitQuizScore")]
-        [Authorize]
+        //[Authorize]
 
         public async Task<IActionResult> SubmitQuizScoreAsync([FromBody] SubmitQuizScore submitQuizScore)
         {

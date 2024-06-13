@@ -44,9 +44,11 @@ builder.Services.AddSingleton<CreateJWT>();
 builder.Services.AddSingleton<EmailSender>();
 builder.Services.AddSingleton<EmailService>();
 builder.Services.AddSingleton<AdminDataAccess>();
+builder.Services.AddSingleton<LessonDataAccess>();
 
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IAdmin, AdminDataAccess>();
+builder.Services.AddScoped<IContent, LessonDataAccess>();
 
 var app = builder.Build();
 
